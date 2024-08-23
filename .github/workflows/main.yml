@@ -12,6 +12,13 @@ permissions:
   packages: write
   issues: write
 
+# Add our notary/signing environment variables
+env:
+  MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+  MACOS_SIGN_P12_PASSWORD: ${{ secrets.MACOS_SIGN_P12_PASSWORD }}
+  MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+  MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+  MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
 
 jobs:
   goreleaser:
@@ -33,6 +40,6 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: release --clean --draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
