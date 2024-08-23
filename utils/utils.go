@@ -1,6 +1,11 @@
 package utils
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -40,4 +45,42 @@ func GetJavaVersion() (JavaVersion, error) {
 		Major:   major,
 		Minor:   minor,
 	}, nil
+}
+
+func MCVersionToJavaMajor(mcVersion string) (int, error) {
+	// 1.8 -> 8+
+	// 1.17 -> 16+
+	// 1.18 -> 17+
+	// 1.20.5 -> 21+
+	// Just return the major version for the given MC version
+	versionSplit := strings.Split(mcVersion, ".")
+	mcMajor, err := strconv.Atoi(versionSplit[1])
+	if err != nil {
+		return 0, err
+	}
+	// 1.8 -> 1.16
+	if mcMajor >= 8 && mcMajor < 17 {
+		return 8, nil
+	} else if mcMajor >= 17 && mcMajor < 18 {
+		return 16, nil
+	} else if mcMajor >= 18 && mcMajor < 20 {
+		return 17, nil
+	} else if mcMajor >= 20 {
+		return 21, nil
+	}
+	return 0, fmt.Errorf("invalid MC version: %s", mcVersion)
+}
+
+func GetSha256Hash(filePath string) (string, error) {
+	// Stream the file, that way we don't have to load the whole thing into memory
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

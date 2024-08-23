@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/mja00/kami-chan-server-installer/minecraft"
 	"github.com/mja00/kami-chan-server-installer/paper"
 	"github.com/mja00/kami-chan-server-installer/utils"
+	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 	"os"
+	"strconv"
+	"strings"
 )
 
 var setupCmd = &cli.Command{
@@ -15,13 +19,36 @@ var setupCmd = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.BoolFlag{Name: "skip-prompts", Usage: "Skip setup prompts. This will only install Java and the jar file"},
 		&cli.BoolFlag{Name: "accept-eula", Aliases: []string{"a"}, Usage: "Accept the EULA"},
-		&cli.StringFlag{Name: "server-name", Aliases: []string{"n"}, Usage: "Server name", Value: "A server installed with Kami Chan Server Installer"},
+		&cli.StringFlag{Name: "server-name", Aliases: []string{"n"}, Usage: "Server name", DefaultText: "A server installed with Kami Chan Server Installer"},
 		&cli.BoolFlag{Name: "whitelist", Aliases: []string{"w"}, Usage: "Enable whitelist"},
 		&cli.BoolFlag{Name: "allow-experimental-builds", Aliases: []string{"e"}, Usage: "Allow experimental builds of Paper to be used"},
+		&cli.StringFlag{Name: "mc-version", Aliases: []string{"m"}, Usage: "Minecraft version", Value: "latest", Action: func(ctx *cli.Context, v string) error {
+			// If the version isn't latest then we need to check if it's valid format
+			// Valid format is X.Y.Z or X.Y
+			if v != "latest" {
+				// Quick and dirty check to see if it's valid
+				// If there is no "." thne it's definitely invalid
+				if !strings.Contains(v, ".") {
+					return fmt.Errorf("invalid Minecraft version: %s", v)
+				}
+				// If there is a "." then we need to make sure it's valid
+				split := strings.Split(v, ".")
+				if len(split) < 2 || len(split) > 3 {
+					return fmt.Errorf("invalid Minecraft version: %s", v)
+				}
+				// So we know it's at least 2 parts, make sure all the parts are numbers
+				for _, part := range split {
+					if _, err := strconv.Atoi(part); err != nil {
+						return fmt.Errorf("invalid Minecraft version: %s", v)
+					}
+				}
+				// Good enough, we're good
+			}
+			return nil
+		}},
 	},
 	Before: func(c *cli.Context) error {
 		fmt.Println("Setting up the server...")
-		fmt.Printf("Server name: %s\n", c.String("server-name"))
 		return nil
 	},
 	After: func(c *cli.Context) error {
@@ -37,8 +64,19 @@ var setupCmd = &cli.Command{
 		}
 		fmt.Printf("Java version: %s\n", javaVersion.Version)
 		// TODO: When Paper API v3 is released, we can check the recommended java version there. For now, we'll do a really shit check
-		if javaVersion.Major < 21 {
-			return fmt.Errorf("java version must be at least 21")
+		var requiredJavaVersion int
+		if c.String("mc-version") == "latest" {
+			// TODO: Don't hardcode this
+			requiredJavaVersion = 21
+		} else {
+			requiredJavaVersion, err = utils.MCVersionToJavaMajor(c.String("mc-version"))
+			if err != nil {
+				return err
+			}
+		}
+		if javaVersion.Major < requiredJavaVersion {
+			// TODO: Install Java for them
+			return fmt.Errorf("java version must be at least %d", requiredJavaVersion)
 		}
 		// Create a server folder
 		serverFolder := "server"
@@ -48,11 +86,78 @@ var setupCmd = &cli.Command{
 				return err
 			}
 		}
-		// First get our Paper API
+		fmt.Println("Downloading server files...")
+		// Download our Paper jar
 		paperAPI := paper.NewPaperAPI()
-		err = paperAPI.DownloadLatestBuild("paper", "server/paper.jar", c.Bool("allow-experimental-builds"))
+		if c.String("mc-version") == "latest" {
+			err = paperAPI.DownloadLatestBuild("paper", "server/paper.jar", c.Bool("allow-experimental-builds"))
+		} else {
+			// Download the specific version
+			err = paperAPI.DownloadLatestBuildForVersion("paper", c.String("mc-version"), "server/paper.jar", c.Bool("allow-experimental-builds"))
+		}
 		if err != nil {
 			return err
+		}
+		// If they didn't already accept the EULA, then we need to prompt them to do so, unless we're skipping prompts, then error
+		if !c.Bool("accept-eula") {
+			// Check if the eula.txt file already exists and if the eula is already accepted
+			eulaFile, err := os.ReadFile("server/eula.txt")
+			if err != nil {
+				return err
+			}
+			var eulaAccepted bool
+			if strings.Contains(string(eulaFile), "eula=true") {
+				fmt.Println("EULA already accepted")
+				eulaAccepted = true
+			}
+			// By default, we'll reject the EULA unless they say yes
+			if !eulaAccepted {
+				for {
+					fmt.Println("You must accept the Minecraft EULA to use this server. You can read the EULA here: https://www.minecraft.net/en-us/eula Do you accept the EULA?")
+					fmt.Print("Accept the EULA? [y/N] ")
+					var response string
+					_, err := fmt.Scanln(&response)
+					if err != nil {
+						return err
+					}
+					response = strings.ToLower(response)
+					if response == "y" || response == "yes" {
+						break
+					} else {
+						// No is default
+						return fmt.Errorf("you must accept the EULA to use this server")
+					}
+				}
+				// They accepted the EULA to get to this point. Write eula=true to the server/eula.txt file
+				err = os.WriteFile("server/eula.txt", []byte("eula=true"), 0644)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		// Prompt the user for a MOTD/server name
+		// Read our server.properties file
+		// While this is a setup command, we're going to assume someone will run this accidentally, this will not wipe their config
+		err = minecraft.ReadServerProperties("server/server.properties")
+		if err != nil {
+			return err
+		}
+		if !c.Bool("skip-prompts") {
+			// If they've already set a server name in the flags, then we'll use that
+			if c.String("server-name") == "" {
+				value := minecraft.PropertyPrompt("motd", "A Minecraft Server")
+				viper.Set("motd", value)
+			}
+			// Same with the whitelist
+			if !c.Bool("whitelist") {
+				value := minecraft.ConfirmPrompt("whitelist")
+				viper.Set("white-list", value)
+			}
+			// Write the server.properties file
+			err = minecraft.WriteServerProperties("server/server.properties")
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	},

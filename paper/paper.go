@@ -1,7 +1,9 @@
 package paper
 
 import (
+	"fmt"
 	"github.com/goccy/go-json"
+	"github.com/mja00/kami-chan-server-installer/utils"
 	"io"
 	"net/http"
 	"os"
@@ -165,6 +167,24 @@ type BuildResponse struct {
 	} `json:"downloads"`
 }
 
+type BuildInfo struct {
+	Build    int       `json:"build"`
+	Time     time.Time `json:"time"`
+	Channel  string    `json:"channel"`
+	Promoted bool      `json:"promoted"`
+	Changes  []struct {
+		Commit  string `json:"commit"`
+		Summary string `json:"summary"`
+		Message string `json:"message"`
+	} `json:"changes"`
+	Downloads struct {
+		Application struct {
+			Name   string `json:"name"`
+			Sha256 string `json:"sha256"`
+		} `json:"application"`
+	} `json:"downloads"`
+}
+
 func (p *PaperAPI) GetBuild(projectID, version string, build int) (*BuildResponse, error) {
 	req, err := http.NewRequest("GET", baseURL+"/projects/"+projectID+"/versions/"+version+"/builds/"+strconv.Itoa(build), nil)
 	if err != nil {
@@ -185,7 +205,39 @@ func (p *PaperAPI) GetBuild(projectID, version string, build int) (*BuildRespons
 	return &buildResponse, nil
 }
 
+func (p *PaperAPI) GetLatestBuild(projectID, version string) (BuildInfo, error) {
+	builds, err := p.GetBuilds(projectID, version)
+	if err != nil {
+		return BuildInfo{}, err
+	}
+
+	return builds.Builds[len(builds.Builds)-1], nil
+}
+
 func (p *PaperAPI) GetBuildDownload(projectID, version string, build int, download string, outputPath string) error {
+	// Be smart here and check if the file already exists, if it does then we can check the sha256 hash against the latest build for this version
+	// If the sha256 hash matches, then we can just return nil
+	// If it doesn't match, then we need to download the file
+	if _, err := os.Stat(outputPath); err == nil {
+		// The file must exist, so we need to check the sha256 hash
+		// First, we need to get the latest build for this version
+		latestBuild, err := p.GetLatestBuild(projectID, version)
+		if err != nil {
+			return err
+		}
+		latestBuildSHA256 := latestBuild.Downloads.Application.Sha256
+		// Now we need to calculate the sha256 hash of the file
+		// Stream the file, that way we don't have to load the whole thing into memory
+		fileHash, err := utils.GetSha256Hash(outputPath)
+		if err != nil {
+			return fmt.Errorf("error calculating sha256 hash: %s", err)
+		}
+		// If they match, then we can just return nil
+		if fileHash == latestBuildSHA256 {
+			fmt.Println("File already exists and SHA256 hash matches, skipping download")
+			return nil
+		}
+	}
 	// This will download the file to the given path
 	req, err := http.NewRequest("GET", baseURL+"/projects/"+projectID+"/versions/"+version+"/builds/"+strconv.Itoa(build)+"/downloads/"+download, nil)
 	if err != nil {
@@ -213,24 +265,6 @@ func (p *PaperAPI) GetBuildDownload(projectID, version string, build int, downlo
 	return nil
 }
 
-type BuildInfo struct {
-	Build    int       `json:"build"`
-	Time     time.Time `json:"time"`
-	Channel  string    `json:"channel"`
-	Promoted bool      `json:"promoted"`
-	Changes  []struct {
-		Commit  string `json:"commit"`
-		Summary string `json:"summary"`
-		Message string `json:"message"`
-	} `json:"changes"`
-	Downloads struct {
-		Application struct {
-			Name   string `json:"name"`
-			Sha256 string `json:"sha256"`
-		} `json:"application"`
-	} `json:"downloads"`
-}
-
 func (p *PaperAPI) DownloadLatestBuild(projectID, outputPath string, allowExperimentalBuilds bool) error {
 	project, err := p.GetProject(projectID)
 	if err != nil {
@@ -255,12 +289,12 @@ func (p *PaperAPI) DownloadLatestBuild(projectID, outputPath string, allowExperi
 		}
 	}
 
-	err = p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
-	if err != nil {
-		return err
+	// If we don't have a build, then they were all experimental builds (probably a new MC release
+	if build.Build == 0 {
+		return fmt.Errorf("no builds found for %s", version)
 	}
 
-	return nil
+	return p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
 }
 
 func (p *PaperAPI) DownloadLatestBuildForVersion(projectID, version, outputPath string, allowExperimentalBuilds bool) error {
@@ -279,5 +313,10 @@ func (p *PaperAPI) DownloadLatestBuildForVersion(projectID, version, outputPath 
 			break
 		}
 	}
+
+	if build.Build == 0 {
+		return fmt.Errorf("no builds found for %s", version)
+	}
+
 	return p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
 }
