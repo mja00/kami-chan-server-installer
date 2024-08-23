@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/mja00/kami-chan-server-installer/paper"
+	"github.com/mja00/kami-chan-server-installer/utils"
 	"github.com/urfave/cli/v2"
 	"os"
 )
@@ -28,6 +29,17 @@ var setupCmd = &cli.Command{
 		return nil
 	},
 	Action: func(c *cli.Context) error {
+		// Check for Java
+		fmt.Println("Checking for Java...")
+		javaVersion, err := utils.GetJavaVersion()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Java version: %s\n", javaVersion.Version)
+		// TODO: When Paper API v3 is released, we can check the recommended java version there. For now, we'll do a really shit check
+		if javaVersion.Major < 21 {
+			return fmt.Errorf("java version must be at least 21")
+		}
 		// Create a server folder
 		serverFolder := "server"
 		if _, err := os.Stat(serverFolder); os.IsNotExist(err) {
@@ -38,7 +50,7 @@ var setupCmd = &cli.Command{
 		}
 		// First get our Paper API
 		paperAPI := paper.NewPaperAPI()
-		err := paperAPI.DownloadLatestBuild("paper", "server/paper.jar")
+		err = paperAPI.DownloadLatestBuild("paper", "server/paper.jar", c.Bool("allow-experimental-builds"))
 		if err != nil {
 			return err
 		}
