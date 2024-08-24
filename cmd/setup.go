@@ -7,6 +7,7 @@ import (
 	"github.com/mja00/kami-chan-server-installer/utils"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -49,21 +50,21 @@ var setupCmd = &cli.Command{
 	},
 	Before: func(c *cli.Context) error {
 		utils.PrintOSWarnings()
-		fmt.Println("Setting up the server...")
+		log.Println("Setting up the server...")
 		return nil
 	},
 	After: func(c *cli.Context) error {
-		fmt.Println("Setup complete!")
+		log.Println("Setup complete!")
 		return nil
 	},
 	Action: func(c *cli.Context) error {
 		// Check for Java
-		fmt.Println("Checking for Java...")
+		log.Println("Checking for Java...")
 		javaVersion, err := utils.GetJavaVersion()
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Java version: %s\n", javaVersion.Version)
+		log.Printf("Java version: %s\n", javaVersion.Version)
 		// TODO: When Paper API v3 is released, we can check the recommended java version there. For now, we'll do a really shit check
 		var requiredJavaVersion int
 		if c.String("mc-version") == "latest" {
@@ -76,12 +77,12 @@ var setupCmd = &cli.Command{
 			}
 		}
 		if javaVersion.Major < requiredJavaVersion {
-			fmt.Println("Java version is too low, downloading...")
+			log.Println("Java version is too low, downloading...")
 			fileLoc, downloadErr := utils.DownloadJava(requiredJavaVersion)
 			if downloadErr != nil {
 				return downloadErr
 			}
-			fmt.Println("Installing Java...")
+			log.Println("Installing Java...")
 			err = utils.InstallJava(fileLoc, c)
 			if err != nil {
 				return err
@@ -97,7 +98,7 @@ var setupCmd = &cli.Command{
 			}
 		}
 		// Create a server folder
-		fmt.Println("Downloading server files...")
+		log.Println("Downloading server files...")
 		// Download our Paper jar
 		paperAPI := paper.NewPaperAPI()
 		if c.String("mc-version") == "latest" {
@@ -118,13 +119,13 @@ var setupCmd = &cli.Command{
 			}
 			var eulaAccepted bool
 			if strings.Contains(string(eulaFile), "eula=true") {
-				fmt.Println("EULA already accepted")
+				log.Println("EULA already accepted")
 				eulaAccepted = true
 			}
 			// By default, we'll reject the EULA unless they say yes
 			if !eulaAccepted {
 				for {
-					fmt.Println("You must accept the Minecraft EULA to use this server. You can read the EULA here: https://www.minecraft.net/en-us/eula Do you accept the EULA?")
+					log.Println("You must accept the Minecraft EULA to use this server. You can read the EULA here: https://www.minecraft.net/en-us/eula Do you accept the EULA?")
 					fmt.Print("Accept the EULA? [y/N] ")
 					var response string
 					_, err := fmt.Scanln(&response)

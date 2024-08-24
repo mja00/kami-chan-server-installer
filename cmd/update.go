@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/urfave/cli/v2"
+	"log"
 )
 
 var updateCmd = &cli.Command{
@@ -13,15 +13,15 @@ var updateCmd = &cli.Command{
 		&cli.BoolFlag{Name: "allow-experimental-builds", Aliases: []string{"e"}, Usage: "Allow experimental builds of Paper to be used"},
 	},
 	Before: func(c *cli.Context) error {
-		fmt.Println("Updating the server...")
+		log.Println("Updating the server...")
 		return nil
 	},
 	After: func(c *cli.Context) error {
-		fmt.Println("Update complete!")
+		log.Println("Update complete!")
 		return nil
 	},
 	Action: func(c *cli.Context) error {
-		fmt.Println("TODO: Update the server")
+		log.Println("TODO: Update the server")
 		return nil
 	},
 }

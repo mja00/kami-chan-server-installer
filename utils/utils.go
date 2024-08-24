@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/urfave/cli/v2"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -113,13 +114,13 @@ func RunCommandAndPipeOutput(cmd *exec.Cmd) error {
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			fmt.Printf("[STDOUT] %s\n", scanner.Text())
+			log.Printf("[STDOUT] %s\n", scanner.Text())
 		}
 	}()
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			fmt.Printf("[STDERR] %s\n", scanner.Text())
+			log.Printf("[STDERR] %s\n", scanner.Text())
 		}
 	}()
 	// Wait for the command to finish

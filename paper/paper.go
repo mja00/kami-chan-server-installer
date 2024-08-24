@@ -6,6 +6,7 @@ import (
 	"github.com/mja00/kami-chan-server-installer/utils"
 	"github.com/schollz/progressbar/v3"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -235,7 +236,7 @@ func (p *PaperAPI) GetBuildDownload(projectID, version string, build int, downlo
 		}
 		// If they match, then we can just return nil
 		if fileHash == latestBuildSHA256 {
-			fmt.Println("File already exists and SHA256 hash matches, skipping download")
+			log.Println("File already exists and SHA256 hash matches, skipping download")
 			return nil
 		}
 	}

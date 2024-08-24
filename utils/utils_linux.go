@@ -1,8 +1,20 @@
 package utils
 
+import (
+	"fmt"
+	"github.com/schollz/progressbar/v3"
+	"github.com/urfave/cli/v2"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+)
+
 func PrintOSWarnings() {
 	// Print nothing, linux is good :)
-	fmt.println("Good job for using Linux!")
+	log.Println("Good job for using Linux!")
 }
 
 func GetArch() string {
@@ -19,8 +31,8 @@ func GetArch() string {
 
 func DownloadJava(version int) (string, error) {
 	if !cliCtx.Bool("install-java-please") {
-		fmt.Println("\n\nWe won't actually download Java, as we want you to use 'apt-get' to install it.")
-		fmt.Println("Don't worry! We'll walk you through it!\n\n")
+		log.Println("\n\nWe won't actually download Java, as we want you to use 'apt-get' to install it.")
+		log.Println("Don't worry! We'll walk you through it!\n\n")
 		return "", nil
 	}
 	arch := GetArch()
@@ -59,8 +71,8 @@ func DownloadJava(version int) (string, error) {
 
 func InstallJava(javaPath string, cliCtx *cli.Context) error {
 	if !cliCtx.Bool("install-java-please") {
-		fmt.Println("When the script exits, go ahead and run the commands found in the Paper guide here: https://docs.papermc.io/misc/java-install#ubuntudebian")
-		fmt.Println("If you're running CentOS, RHEL, Fedora, openSUSE, SLES, or any other RPM-based Linux distribution use: https://docs.papermc.io/misc/java-install#rpm-based")
+		log.Println("When the script exits, go ahead and run the commands found in the Paper guide here: https://docs.papermc.io/misc/java-install#ubuntudebian")
+		log.Println("If you're running CentOS, RHEL, Fedora, openSUSE, SLES, or any other RPM-based Linux distribution use: https://docs.papermc.io/misc/java-install#rpm-based")
 		return nil
 	}
 	// The user really wants us to install Java for them. We need to ensure we're root. Otherwise we cannot
@@ -77,7 +89,7 @@ func InstallJava(javaPath string, cliCtx *cli.Context) error {
 	cmd := exec.Command("dpkg", "-i", javaPath)
 	if debug {
 		// Just print the command we'd run
-		fmt.Println(cmd.String())
+		log.Println(cmd.String())
 		return nil
 	}
 	// We want to run the command and in real time print the output

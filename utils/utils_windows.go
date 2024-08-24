@@ -1,8 +1,20 @@
 package utils
 
+import (
+	"fmt"
+	"github.com/schollz/progressbar/v3"
+	"github.com/urfave/cli/v2"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+)
+
 func PrintOSWarnings() {
 	// Just let them know macOS isn't the _best_ OS for running a Minecraft server
-	fmt.Println("Warning: Windows is not the best OS for running a Minecraft server. You may experience issues with performance or stability.")
+	log.Println("Warning: Windows is not the best OS for running a Minecraft server. You may experience issues with performance or stability.")
 }
 
 func GetArch() string {
@@ -58,7 +70,7 @@ func InstallJava(javaPath string, cliCtx *cli.Context) error {
 	cmd := exec.Command("msiexec", "/i", javaPath, "/quiet", "/qn", "/norestart", "/log", "./temp/java-install.log")
 	if debug {
 		// Just print the command we'd run
-		fmt.Println(cmd.String())
+		log.Println(cmd.String())
 		return nil
 	}
 	return RunCommandAndPipeOutput(cmd)

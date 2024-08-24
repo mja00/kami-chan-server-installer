@@ -5,6 +5,7 @@ go 1.22.1
 require (
 	github.com/goccy/go-json v0.10.3
 	github.com/manifoldco/promptui v0.9.0
+	github.com/schollz/progressbar/v3 v3.14.6
 	github.com/spf13/viper v1.19.0
 	github.com/urfave/cli/v2 v2.27.4
 	golang.org/x/text v0.14.0
@@ -23,7 +24,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/schollz/progressbar/v3 v3.14.6 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
