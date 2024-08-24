@@ -78,7 +78,7 @@ var setupCmd = &cli.Command{
 		}
 		if javaVersion.Major < requiredJavaVersion {
 			log.Println("Java version is too low, downloading...")
-			fileLoc, downloadErr := utils.DownloadJava(requiredJavaVersion)
+			fileLoc, downloadErr := utils.DownloadJava(requiredJavaVersion, c)
 			if downloadErr != nil {
 				return downloadErr
 			}

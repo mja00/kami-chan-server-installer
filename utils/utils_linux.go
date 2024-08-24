@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 func PrintOSWarnings() {
@@ -29,7 +30,7 @@ func GetArch() string {
 	}
 }
 
-func DownloadJava(version int) (string, error) {
+func DownloadJava(version int, cliCtx *cli.Context) (string, error) {
 	if !cliCtx.Bool("install-java-please") {
 		log.Println("\n\nWe won't actually download Java, as we want you to use 'apt-get' to install it.")
 		log.Println("Don't worry! We'll walk you through it!\n\n")
@@ -75,13 +76,17 @@ func InstallJava(javaPath string, cliCtx *cli.Context) error {
 		log.Println("If you're running CentOS, RHEL, Fedora, openSUSE, SLES, or any other RPM-based Linux distribution use: https://docs.papermc.io/misc/java-install#rpm-based")
 		return nil
 	}
+	debug := cliCtx.Bool("debug")
 	// The user really wants us to install Java for them. We need to ensure we're root. Otherwise we cannot
-	// Check our user ID
-	user, err := user.Current()
+	// run id command and grab the user ID
+	userCommand := exec.Command("id", "-u")
+	output, err := userCommand.CombinedOutput()
 	if err != nil {
 		return err
 	}
-	if user.Uid != "0" {
+	userId := strings.TrimSpace(string(output))
+
+	if userId != "0" {
 		return fmt.Errorf("you must be root to install Java automatically")
 	}
 	// We're root, so lets download the deb file and install it

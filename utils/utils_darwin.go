@@ -24,7 +24,7 @@ func GetArch() string {
 	}
 }
 
-func DownloadJava(version int) (string, error) {
+func DownloadJava(version int, _ *cli.Context) (string, error) {
 	arch := GetArch()
 	javaURL := fmt.Sprintf("https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-macos-jdk.pkg", version, arch)
 	// Make sure the temp directory exists
