@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -91,12 +92,12 @@ func GetSha256Hash(filePath string) (string, error) {
 func GetServerFolder(path string, cCtx *cli.Context) string {
 	serverFolder := cCtx.String("server-dir")
 	if _, err := os.Stat(serverFolder); os.IsNotExist(err) {
-		err := os.Mkdir(serverFolder, 0755)
+		err := os.MkdirAll(serverFolder, 0755)
 		if err != nil {
 			return ""
 		}
 	}
-	return fmt.Sprintf("%s/%s", serverFolder, path)
+	return filepath.Join(serverFolder, path)
 }
 
 func RunCommandAndPipeOutput(cmd *exec.Cmd) error {

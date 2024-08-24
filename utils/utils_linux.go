@@ -40,7 +40,7 @@ func DownloadJava(version int, cliCtx *cli.Context) (string, error) {
 	javaURL := fmt.Sprintf("https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-linux-jdk.deb", version, arch)
 
 	if _, err := os.Stat("./temp"); os.IsNotExist(err) {
-		err := os.Mkdir("./temp", 0755)
+		err := os.MkdirAll("./temp", 0755)
 		if err != nil {
 			return "", err
 		}

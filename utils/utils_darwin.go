@@ -29,7 +29,7 @@ func DownloadJava(version int, _ *cli.Context) (string, error) {
 	javaURL := fmt.Sprintf("https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-macos-jdk.pkg", version, arch)
 	// Make sure the temp directory exists
 	if _, err := os.Stat("./temp"); os.IsNotExist(err) {
-		err := os.Mkdir("./temp", 0755)
+		err := os.MkdirAll("./temp", 0755)
 		if err != nil {
 			return "", err
 		}

@@ -32,13 +32,13 @@ func DownloadJava(version int, _ *cli.Context) (string, error) {
 	arch := GetArch()
 	javaURL := fmt.Sprintf("https://corretto.aws/downloads/latest/amazon-corretto-%d-x64-windows-jdk.msi", version)
 
-	if _, err := os.Stat("./temp"); os.IsNotExist(err) {
-		err := os.Mkdir("./temp", 0755)
+	if _, err := os.Stat("temp"); os.IsNotExist(err) {
+		err := os.MkdirAll("temp", 0755)
 		if err != nil {
 			return "", err
 		}
 	}
-	out, err := os.Create(fmt.Sprintf("./temp/java-%d-%s.msi", version, arch))
+	out, err := os.Create(filepath.Join("temp", fmt.Sprintf("java-%d-%s.msi", version, arch)))
 	if err != nil {
 		return "", err
 	}
@@ -60,14 +60,14 @@ func DownloadJava(version int, _ *cli.Context) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("./temp/java-%d-%s.msi", version, arch), nil
+	return filepath.Join("temp", fmt.Sprintf("java-%d-%s.msi", version, arch)), nil
 }
 
 func InstallJava(javaPath string, cliCtx *cli.Context) error {
 	debug := cliCtx.Bool("debug")
 	// If we're in debug, don't actually install Java, just print what we'd do
 	// Install: msiexec /i ./temp/java-21-x64.msi /quit /qn /norestart /log ./temp/java-install.log
-	cmd := exec.Command("msiexec", "/i", javaPath, "/quiet", "/qn", "/norestart", "/log", "./temp/java-install.log")
+	cmd := exec.Command("msiexec", "/i", javaPath, "/quiet", "/qn", "/norestart", "/log", filepath.Join("temp", "java-install.log"))
 	if debug {
 		// Just print the command we'd run
 		log.Println(cmd.String())
