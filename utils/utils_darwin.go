@@ -89,5 +89,5 @@ java -Xms%dM -Xmx%dM -XX:+AlwaysPreTouch -XX:+DisableExplicitGC -XX:+ParallelRef
 		return err
 	}
 	// Make the file executable
-	return os.Chmod(path, 0755)
+	return os.Chmod(fmt.Sprintf("%s.sh", path), 0755)
 }
