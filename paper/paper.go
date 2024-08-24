@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/mja00/kami-chan-server-installer/utils"
+	"github.com/schollz/progressbar/v3"
 	"io"
 	"net/http"
 	"os"
@@ -254,10 +255,14 @@ func (p *PaperAPI) GetBuildDownload(projectID, version string, build int, downlo
 	if err != nil {
 		return err
 	}
-
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	bar := progressbar.DefaultBytes(
+		resp.ContentLength,
+		"Downloading Paper",
+	)
+
+	_, err = io.Copy(io.MultiWriter(out, bar), resp.Body)
 	if err != nil {
 		return err
 	}

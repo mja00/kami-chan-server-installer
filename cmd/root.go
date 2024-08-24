@@ -14,10 +14,12 @@ var rootCmd = &cli.App{
 		fmt.Println("No commands given. Installing server by default...")
 		return setupCmd.Run(cCtx)
 	},
-}
-
-func init() {
-
+	Flags: []cli.Flag{
+		&cli.BoolFlag{Name: "debug", Usage: "Enable debug mode"},
+		&cli.BoolFlag{Name: "verbose", Usage: "Enable verbose mode"},
+		&cli.StringFlag{Name: "server-dir", Usage: "Server directory", Value: "server"},
+		&cli.BoolFlag{Name: "install-java-please", Usage: "This will install Java for you anyways on Linux"},
+	},
 }
 
 func Run() {

@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/urfave/cli/v2"
 	"io"
 	"os"
 	"os/exec"
@@ -83,4 +85,47 @@ func GetSha256Hash(filePath string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func GetServerFolder(path string, cCtx *cli.Context) string {
+	serverFolder := cCtx.String("server-dir")
+	if _, err := os.Stat(serverFolder); os.IsNotExist(err) {
+		err := os.Mkdir(serverFolder, 0755)
+		if err != nil {
+			return ""
+		}
+	}
+	return fmt.Sprintf("%s/%s", serverFolder, path)
+}
+
+func RunCommandAndPipeOutput(cmd *exec.Cmd) error {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			fmt.Printf("[STDOUT] %s\n", scanner.Text())
+		}
+	}()
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			fmt.Printf("[STDERR] %s\n", scanner.Text())
+		}
+	}()
+	// Wait for the command to finish
+	err = cmd.Wait()
+	if err != nil {
+		return err
+	}
+	return nil
 }

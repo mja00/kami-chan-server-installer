@@ -1,0 +1,65 @@
+package utils
+
+func PrintOSWarnings() {
+	// Just let them know macOS isn't the _best_ OS for running a Minecraft server
+	fmt.Println("Warning: Windows is not the best OS for running a Minecraft server. You may experience issues with performance or stability.")
+}
+
+func GetArch() string {
+	// Literally don't support anything other than x64 for now
+	switch runtime.GOARCH {
+	case "amd64":
+		return "x64"
+	default:
+		// Fatally die
+		panic("Unsupported architecture")
+	}
+}
+
+func DownloadJava(version int) (string, error) {
+	arch := GetArch()
+	javaURL := fmt.Sprintf("https://corretto.aws/downloads/latest/amazon-corretto-%d-x64-windows-jdk.msi", version)
+
+	if _, err := os.Stat("./temp"); os.IsNotExist(err) {
+		err := os.Mkdir("./temp", 0755)
+		if err != nil {
+			return "", err
+		}
+	}
+	out, err := os.Create(fmt.Sprintf("./temp/java-%d-%s.msi", version, arch))
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	resp, err := http.Get(javaURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bar := progressbar.DefaultBytes(
+		resp.ContentLength,
+		"Downloading Java",
+	)
+
+	_, err = io.Copy(io.MultiWriter(out, bar), resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("./temp/java-%d-%s.msi", version, arch), nil
+}
+
+func InstallJava(javaPath string, cliCtx *cli.Context) error {
+	debug := cliCtx.Bool("debug")
+	// If we're in debug, don't actually install Java, just print what we'd do
+	// Install: msiexec /i ./temp/java-21-x64.msi /quit /qn /norestart /log ./temp/java-install.log
+	cmd := exec.Command("msiexec", "/i", javaPath, "/quiet", "/qn", "/norestart", "/log", "./temp/java-install.log")
+	if debug {
+		// Just print the command we'd run
+		fmt.Println(cmd.String())
+		return nil
+	}
+	return RunCommandAndPipeOutput(cmd)
+}

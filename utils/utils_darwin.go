@@ -1,0 +1,79 @@
+package utils
+
+import (
+	"fmt"
+	"github.com/schollz/progressbar/v3"
+	"github.com/urfave/cli/v2"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+)
+
+func GetArch() string {
+	// Check GOARCH
+	switch runtime.GOARCH {
+	case "amd64":
+		return "x64"
+	case "arm64":
+		return "aarch64"
+	default:
+		return "x64"
+	}
+}
+
+func DownloadJava(version int) (string, error) {
+	arch := GetArch()
+	javaURL := fmt.Sprintf("https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-macos-jdk.pkg", version, arch)
+	// Make sure the temp directory exists
+	if _, err := os.Stat("./temp"); os.IsNotExist(err) {
+		err := os.Mkdir("./temp", 0755)
+		if err != nil {
+			return "", err
+		}
+	}
+	// Download this file to the ./temp directory
+	out, err := os.Create(fmt.Sprintf("./temp/java-%d-%s.pkg", version, arch))
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	resp, err := http.Get(javaURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bar := progressbar.DefaultBytes(
+		resp.ContentLength,
+		"Downloading Java",
+	)
+
+	_, err = io.Copy(io.MultiWriter(out, bar), resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("./temp/java-%d-%s.pkg", version, arch), nil
+}
+
+func InstallJava(javaPath string, cliCtx *cli.Context) error {
+	debug := cliCtx.Bool("debug")
+	// If we're in debug, don't actually install Java, just print what we'd do
+	// For install we're running: installer -pkg ./temp/java-21-x64.pkg -target CurrentUserHomeDirectory
+	cmd := exec.Command("installer", "-pkg", javaPath, "-target", "CurrentUserHomeDirectory")
+	if debug {
+		// Just print the command we'd run
+		fmt.Println(cmd.String())
+		return nil
+	}
+	// We want to run the command and in real time print the output
+	return RunCommandAndPipeOutput(cmd)
+}
+
+func PrintOSWarnings() {
+	// Just let them know macOS isn't the _best_ OS for running a Minecraft server
+	fmt.Println("Warning: macOS is not the best OS for running a Minecraft server. You may experience issues with performance or stability.")
+}

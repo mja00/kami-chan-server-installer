@@ -48,6 +48,7 @@ var setupCmd = &cli.Command{
 		}},
 	},
 	Before: func(c *cli.Context) error {
+		utils.PrintOSWarnings()
 		fmt.Println("Setting up the server...")
 		return nil
 	},
@@ -75,25 +76,35 @@ var setupCmd = &cli.Command{
 			}
 		}
 		if javaVersion.Major < requiredJavaVersion {
-			// TODO: Install Java for them
-			return fmt.Errorf("java version must be at least %d", requiredJavaVersion)
-		}
-		// Create a server folder
-		serverFolder := "server"
-		if _, err := os.Stat(serverFolder); os.IsNotExist(err) {
-			err := os.Mkdir(serverFolder, 0755)
+			fmt.Println("Java version is too low, downloading...")
+			fileLoc, downloadErr := utils.DownloadJava(requiredJavaVersion)
+			if downloadErr != nil {
+				return downloadErr
+			}
+			fmt.Println("Installing Java...")
+			err = utils.InstallJava(fileLoc, c)
 			if err != nil {
 				return err
 			}
+			// Re-verify the Java version
+			javaVersion, err = utils.GetJavaVersion()
+			if err != nil {
+				return err
+			}
+			// If we're still too low then something went wrong, error and let the user figure it out
+			if javaVersion.Major < requiredJavaVersion {
+				return fmt.Errorf("java version must be at least %d", requiredJavaVersion)
+			}
 		}
+		// Create a server folder
 		fmt.Println("Downloading server files...")
 		// Download our Paper jar
 		paperAPI := paper.NewPaperAPI()
 		if c.String("mc-version") == "latest" {
-			err = paperAPI.DownloadLatestBuild("paper", "server/paper.jar", c.Bool("allow-experimental-builds"))
+			err = paperAPI.DownloadLatestBuild("paper", utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
 		} else {
 			// Download the specific version
-			err = paperAPI.DownloadLatestBuildForVersion("paper", c.String("mc-version"), "server/paper.jar", c.Bool("allow-experimental-builds"))
+			err = paperAPI.DownloadLatestBuildForVersion("paper", c.String("mc-version"), utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
 		}
 		if err != nil {
 			return err
@@ -101,7 +112,7 @@ var setupCmd = &cli.Command{
 		// If they didn't already accept the EULA, then we need to prompt them to do so, unless we're skipping prompts, then error
 		if !c.Bool("accept-eula") {
 			// Check if the eula.txt file already exists and if the eula is already accepted
-			eulaFile, err := os.ReadFile("server/eula.txt")
+			eulaFile, err := os.ReadFile(utils.GetServerFolder("eula.txt", c))
 			if err != nil {
 				return err
 			}
@@ -129,7 +140,7 @@ var setupCmd = &cli.Command{
 					}
 				}
 				// They accepted the EULA to get to this point. Write eula=true to the server/eula.txt file
-				err = os.WriteFile("server/eula.txt", []byte("eula=true"), 0644)
+				err = os.WriteFile(utils.GetServerFolder("eula.txt", c), []byte("eula=true"), 0644)
 				if err != nil {
 					return err
 				}
@@ -138,7 +149,7 @@ var setupCmd = &cli.Command{
 		// Prompt the user for a MOTD/server name
 		// Read our server.properties file
 		// While this is a setup command, we're going to assume someone will run this accidentally, this will not wipe their config
-		err = minecraft.ReadServerProperties("server/server.properties")
+		err = minecraft.ReadServerProperties(utils.GetServerFolder("server.properties", c))
 		if err != nil {
 			return err
 		}
@@ -154,7 +165,7 @@ var setupCmd = &cli.Command{
 				viper.Set("white-list", value)
 			}
 			// Write the server.properties file
-			err = minecraft.WriteServerProperties("server/server.properties")
+			err = minecraft.WriteServerProperties(utils.GetServerFolder("server.properties", c))
 			if err != nil {
 				return err
 			}
