@@ -1,0 +1,33 @@
+# Essentially just run the project on each OS and make sure the paper.jar file is downloaded
+name: Test
+
+on:
+  pull_request:
+  push:
+
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.22
+          cache: true
+      - run: go mod tidy
+      # Now all we need to do is run the actual script
+      - run: go run main.go setup --accept-eula --server-name "Test Server" --whitelist --skip-prompts --allow-experimental-builds
+      # Verify that paper.jar is in the server folder
+      - name: Verify files
+        uses: andstor/file-existence-action@v3.0.0
+        with:
+          files: "server/paper.jar"
+          fail: true
