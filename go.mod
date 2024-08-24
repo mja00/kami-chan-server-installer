@@ -5,6 +5,7 @@ go 1.22.1
 require (
 	github.com/goccy/go-json v0.10.3
 	github.com/manifoldco/promptui v0.9.0
+	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/schollz/progressbar/v3 v3.14.6
 	github.com/spf13/viper v1.19.0
 	github.com/urfave/cli/v2 v2.27.4

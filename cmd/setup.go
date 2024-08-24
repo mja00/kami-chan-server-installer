@@ -5,9 +5,11 @@ import (
 	"github.com/mja00/kami-chan-server-installer/minecraft"
 	"github.com/mja00/kami-chan-server-installer/paper"
 	"github.com/mja00/kami-chan-server-installer/utils"
+	"github.com/pbnjay/memory"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -170,6 +172,18 @@ var setupCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
+		}
+
+		// Get the RAM of the machine
+		totalRAM := float64(memory.TotalMemory())
+		// At most we'll only ever set the script to use 10GB of RAM
+		// Otherwise we'll use 75% of the total RAM
+		ramAmount := int(math.Min(float64(10*1024*1024*1024), totalRAM*0.75))
+		// Conver the amount to MB
+		ramAmount = ramAmount / 1024 / 1024
+		err = utils.WriteStartScript(utils.GetServerFolder("start", c), ramAmount, c)
+		if err != nil {
+			return err
 		}
 		return nil
 	},

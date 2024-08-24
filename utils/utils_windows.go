@@ -75,3 +75,16 @@ func InstallJava(javaPath string, cliCtx *cli.Context) error {
 	}
 	return RunCommandAndPipeOutput(cmd)
 }
+
+func WriteStartScript(path string, ramAmount int, cliCtx *cli.Context) error {
+	startScript := fmt.Sprintf(`@echo off
+
+java -Xms%s6M -Xmx%sM -XX:+AlwaysPreTouch -XX:+DisableExplicitGC -XX:+ParallelRefProcEnabled -XX:+PerfDisableSharedMem -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1HeapRegionSize=8M -XX:G1HeapWastePercent=5 -XX:G1MaxNewSizePercent=40 -XX:G1MixedGCCountTarget=4 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1NewSizePercent=30 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:G1ReservePercent=20 -XX:InitiatingHeapOccupancyPercent=15 -XX:MaxGCPauseMillis=200 -XX:MaxTenuringThreshold=1 -XX:SurvivorRatio=32 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true -jar server.jar nogui
+
+pause`, ramAmount, ramAmount)
+	err := os.WriteFile(fmt.Sprintf("%s.bat", path), []byte(startScript), 0755)
+	if err != nil {
+		return err
+	}
+	return nil
+}
