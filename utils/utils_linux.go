@@ -33,7 +33,7 @@ func GetArch() string {
 func DownloadJava(version int, cliCtx *cli.Context) (string, error) {
 	if !cliCtx.Bool("install-java-please") {
 		log.Println("\n\nWe won't actually download Java, as we want you to use 'apt-get' to install it.")
-		log.Println("Don't worry! We'll walk you through it!\n\n")
+		log.Println("Don't worry! We'll walk you through it!")
 		return "", nil
 	}
 	arch := GetArch()
