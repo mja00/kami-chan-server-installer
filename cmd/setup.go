@@ -117,7 +117,10 @@ var setupCmd = &cli.Command{
 			// Check if the eula.txt file already exists and if the eula is already accepted
 			eulaFile, err := os.ReadFile(utils.GetServerFolder("eula.txt", c))
 			if err != nil {
-				return err
+				// Ignore file not found error
+				if !os.IsNotExist(err) {
+					return err
+				}
 			}
 			var eulaAccepted bool
 			if strings.Contains(string(eulaFile), "eula=true") {
