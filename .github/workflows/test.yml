@@ -13,6 +13,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Ensure Java 21 is installed
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
       - name: Checkout
         uses: actions/checkout@v3
         with:
