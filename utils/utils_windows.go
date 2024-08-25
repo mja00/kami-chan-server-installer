@@ -89,3 +89,7 @@ pause`, ramAmount, ramAmount)
 	}
 	return nil
 }
+
+func GetStartScript(path string) string {
+	return fmt.Sprintf("%s.bat", path)
+}

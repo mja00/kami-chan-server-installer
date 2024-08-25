@@ -131,3 +131,60 @@ func RunCommandAndPipeOutput(cmd *exec.Cmd) error {
 	}
 	return nil
 }
+
+func RunCommandAndPipeAllSTD(cmd *exec.Cmd, noPrefix bool) error {
+	// We need to pipe buth STDOUT and STDERR to the terminal but also STDIN to the command we're running
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			if !noPrefix {
+				log.Printf("[STDOUT] %s\n", scanner.Text())
+			} else {
+				fmt.Println(scanner.Text())
+			}
+		}
+	}()
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			if !noPrefix {
+				log.Printf("[STDERR] %s\n", scanner.Text())
+			} else {
+				fmt.Println(scanner.Text())
+			}
+		}
+	}()
+	// Now we need to pipe STDIN to the command we're running
+	go func() {
+		// Read from this program's STDIN
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			// Write
+			_, err := io.WriteString(stdin, scanner.Text()+"\n")
+			if err != nil {
+				return
+			}
+		}
+	}()
+	// Now we need to wait for the command to finish
+	err = cmd.Wait()
+	if err != nil {
+		return err
+	}
+	return nil
+}

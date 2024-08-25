@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/manifoldco/promptui"
 	"github.com/mja00/kami-chan-server-installer/minecraft"
 	"github.com/mja00/kami-chan-server-installer/paper"
 	"github.com/mja00/kami-chan-server-installer/utils"
@@ -11,6 +12,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -188,6 +190,41 @@ var setupCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
+		startScriptLocation := utils.GetStartScript(utils.GetServerFolder("start", c))
+		// Ask the user if they want to start the server now or not
+		prompt := promptui.Prompt{
+			Label:     "Would you like to start the server now?",
+			IsConfirm: true,
+		}
+		result, _ := prompt.Run()
+		if result == "y" {
+			// Start the server
+			startScript := utils.GetStartScript("start")
+			log.Println("Starting the server...")
+			pwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			// We need to change the working directory to the server folder
+			err = os.Chdir(utils.GetServerFolder("", c))
+			if err != nil {
+				return err
+			}
+			err = utils.RunCommandAndPipeAllSTD(exec.Command("./"+startScript), true)
+			if err != nil {
+				return err
+			}
+			// cd back
+			err = os.Chdir(pwd)
+			// If we got here, the server was started and then stopped.
+			// Just inform the user that to run the server again, they need to go into the server folder and run the start script
+			log.Println("Server was successfully started! To run the server again, go into the server folder and run the start script.")
+			log.Printf("The start script is located at: %s", startScriptLocation)
+			return nil
+		}
+		// They said no, just tell them how to run the server
+		log.Println("To run the server, go into the server folder and run the start script.")
+		log.Printf("The start script is located at: %s", startScriptLocation)
 		return nil
 	},
 }

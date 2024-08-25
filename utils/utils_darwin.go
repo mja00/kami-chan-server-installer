@@ -91,3 +91,7 @@ java -Xms%dM -Xmx%dM -XX:+AlwaysPreTouch -XX:+DisableExplicitGC -XX:+ParallelRef
 	// Make the file executable
 	return os.Chmod(fmt.Sprintf("%s.sh", path), 0755)
 }
+
+func GetStartScript(path string) string {
+	return fmt.Sprintf("%s.sh", path)
+}
