@@ -282,6 +282,7 @@ func prompt() error {
 				Title("Server Name").
 				Description("What do you want to name your server?").
 				Value(&serverName).
+				Validate(huh.ValidateMaxLength(56)).
 				Placeholder("A Minecraft Server"),
 			// Whitelist
 			huh.NewConfirm().
