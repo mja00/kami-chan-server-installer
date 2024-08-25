@@ -34,34 +34,6 @@ var setupCmd = &cli.Command{
 	Usage:       "Setup and install the server",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{Name: "skip-prompts", Usage: "Skip setup prompts. This will only install Java and the jar file"},
-		&cli.BoolFlag{Name: "accept-eula", Aliases: []string{"a"}, Usage: "Accept the EULA"},
-		&cli.StringFlag{Name: "server-name", Aliases: []string{"n"}, Usage: "Server name", DefaultText: "A server installed with Kami Chan Server Installer", Value: "A Minecraft Server"},
-		&cli.BoolFlag{Name: "whitelist", Aliases: []string{"w"}, Usage: "Enable whitelist"},
-		&cli.BoolFlag{Name: "allow-experimental-builds", Aliases: []string{"e"}, Usage: "Allow experimental builds of Paper to be used"},
-		&cli.StringFlag{Name: "mc-version", Aliases: []string{"m"}, Usage: "Minecraft version", Value: "latest", Action: func(ctx *cli.Context, v string) error {
-			// If the version isn't latest then we need to check if it's valid format
-			// Valid format is X.Y.Z or X.Y
-			if v != "latest" {
-				// Quick and dirty check to see if it's valid
-				// If there is no "." thne it's definitely invalid
-				if !strings.Contains(v, ".") {
-					return fmt.Errorf("invalid Minecraft version: %s", v)
-				}
-				// If there is a "." then we need to make sure it's valid
-				split := strings.Split(v, ".")
-				if len(split) < 2 || len(split) > 3 {
-					return fmt.Errorf("invalid Minecraft version: %s", v)
-				}
-				// So we know it's at least 2 parts, make sure all the parts are numbers
-				for _, part := range split {
-					if _, err := strconv.Atoi(part); err != nil {
-						return fmt.Errorf("invalid Minecraft version: %s", v)
-					}
-				}
-				// Good enough, we're good
-			}
-			return nil
-		}},
 	},
 	Before: func(c *cli.Context) error {
 		utils.PrintOSWarnings()
@@ -74,12 +46,9 @@ var setupCmd = &cli.Command{
 		// If debug pring all the flags
 		if c.Bool("debug") {
 			log.Println("Debug mode enabled")
-			for _, flag := range c.FlagNames() {
-				log.Printf("Flag: %s, Value: %s", flag, c.String(flag))
-			}
 		}
 		for !c.Bool("skip-prompts") {
-			err := prompt(c)
+			err := prompt()
 			if err != nil {
 				// If the error is that we can't open a TTY, then just break from this loop. We'll use default values
 				// error: huh: could not open a new TTY: open /dev/tty: no such device or address
@@ -135,11 +104,11 @@ var setupCmd = &cli.Command{
 		log.Printf("Java version: %s\n", javaVersion.Version)
 		// TODO: When Paper API v3 is released, we can check the recommended java version there. For now, we'll do a really shit check
 		var requiredJavaVersion int
-		if c.String("mc-version") == "latest" {
+		if minecraftVersion == "latest" {
 			// TODO: Don't hardcode this
 			requiredJavaVersion = 21
 		} else {
-			requiredJavaVersion, err = utils.MCVersionToJavaMajor(c.String("mc-version"))
+			requiredJavaVersion, err = utils.MCVersionToJavaMajor(minecraftVersion)
 			if err != nil {
 				return err
 			}
@@ -271,7 +240,7 @@ func init() {
 	rootCmd.Commands = append(rootCmd.Commands, setupCmd)
 }
 
-func prompt(c *cli.Context) error {
+func prompt() error {
 	// Before we do anything, lets get some info from the user
 	form := huh.NewForm(
 		huh.NewGroup(
@@ -279,7 +248,6 @@ func prompt(c *cli.Context) error {
 				Title("Minecraft Version").
 				Description("What version of Minecraft do you want to use?").
 				Value(&minecraftVersion).
-				Placeholder(c.String("mc-version")).
 				Validate(func(v string) error {
 					if v != "latest" {
 						// Quick and dirty check to see if it's valid
