@@ -90,6 +90,7 @@ var setupCmd = &cli.Command{
 				return err
 			}
 			// Print out our settings
+			// TODO: Replace this with a nicer output. Probably just some bubbletea fanciness
 			fmt.Printf("Minecraft Version: %s\n", minecraftVersion)
 			fmt.Printf("Allow Experimental Builds: %t\n", allowExperimental)
 			fmt.Printf("Server Name: %s\n", serverName)
@@ -203,9 +204,7 @@ var setupCmd = &cli.Command{
 				return err
 			}
 		}
-		// Prompt the user for a MOTD/server name
 		// Read our server.properties file
-		// While this is a setup command, we're going to assume someone will run this accidentally, this will not wipe their config
 		err = minecraft.ReadServerProperties(utils.GetServerFolder("server.properties", c))
 		if err != nil {
 			return err
