@@ -15,7 +15,7 @@ import (
 
 // This will handle all of our API calls to the Paper API
 
-const baseURL = "https://papermc.io/api/v2"
+const baseURL = "https://api.papermc.io/v2"
 
 type PaperAPI struct {
 	client *http.Client
@@ -31,11 +31,16 @@ type ProjectsResponse struct {
 	Projects []string `json:"projects"`
 }
 
+func AddHeaders(req *http.Request) {
+	req.Header.Add("User-Agent", "Kami Chan Server Installer")
+}
+
 func (p *PaperAPI) GetProjects() ([]string, error) {
 	req, err := http.NewRequest("GET", baseURL+"/projects", nil)
 	if err != nil {
 		return nil, err
 	}
+	AddHeaders(req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -63,6 +68,7 @@ func (p *PaperAPI) GetProject(projectID string) (*ProjectResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	AddHeaders(req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -90,6 +96,7 @@ func (p *PaperAPI) GetVersion(projectID, version string) (*VersionResponse, erro
 	if err != nil {
 		return nil, err
 	}
+	AddHeaders(req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -133,6 +140,7 @@ func (p *PaperAPI) GetBuilds(projectID, version string) (*BuildsResponse, error)
 	if err != nil {
 		return nil, err
 	}
+	AddHeaders(req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -192,6 +200,7 @@ func (p *PaperAPI) GetBuild(projectID, version string, build int) (*BuildRespons
 	if err != nil {
 		return nil, err
 	}
+	AddHeaders(req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -245,6 +254,7 @@ func (p *PaperAPI) GetBuildDownload(projectID, version string, build int, downlo
 	if err != nil {
 		return err
 	}
+	AddHeaders(req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
