@@ -26,6 +26,19 @@ builds:
       # Target Version in the main.go file
       - -X main.Version={{ .Tag }}
       - -X main.Commit={{ .ShortCommit }}
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # Windows 32bit
+      - goos: windows
+        goarch: "386"
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: linux
+        goarch: "386"
 
 archives:
   - format: tar.gz
