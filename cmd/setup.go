@@ -21,11 +21,11 @@ import (
 
 var (
 	// This will be used for huh
-	minecraftVersion  string
-	serverName        string
-	whitelist         bool
-	acceptEULA        bool
-	allowExperimental bool
+	minecraftVersion  = "latest"
+	serverName        = "A Minecraft Server"
+	whitelist         = false
+	acceptEULA        = false
+	allowExperimental = false
 )
 
 var setupCmd = &cli.Command{
@@ -81,6 +81,12 @@ var setupCmd = &cli.Command{
 		for {
 			err := prompt(c)
 			if err != nil {
+				// If the error is that we can't open a TTY, then just break from this loop. We'll use default values
+				// error: huh: could not open a new TTY: open /dev/tty: no such device or address
+				if strings.Contains(err.Error(), "could not open a new TTY") {
+					break
+				}
+				// Otherwise, we'll just return the error
 				return err
 			}
 			// Print out our settings
