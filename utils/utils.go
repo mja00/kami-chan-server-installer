@@ -26,7 +26,19 @@ func GetJavaVersion() (JavaVersion, error) {
 	cmd := exec.Command("java", "-version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return JavaVersion{}, err
+		// Check to see if the error is a command not found error
+		if strings.Contains(err.Error(), "executable file not found") {
+			return JavaVersion{
+				Version: "unknown",
+				Major:   0,
+				Minor:   0,
+			}, nil
+		}
+		return JavaVersion{
+			Version: "unknown",
+			Major:   0,
+			Minor:   0,
+		}, err
 	}
 	// On modern Java (which we care about), the output will follow:
 	// openjdk version "21.0.3" 2024-04-16 LTS
