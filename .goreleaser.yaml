@@ -22,6 +22,10 @@ builds:
       - linux
       - windows
       - darwin
+    ldflags:
+      # Target Version in the main.go file
+      - -X main.Version={{ .Tag }}
+      - -X main.Commit={{ .ShortCommit }}
 
 archives:
   - format: tar.gz

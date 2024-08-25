@@ -19,7 +19,11 @@ var rootCmd = &cli.App{
 		&cli.StringFlag{Name: "server-dir", Usage: "Server directory", Value: "server"},
 		&cli.BoolFlag{Name: "install-java-please", Usage: "This will install Java for you anyways on Linux"},
 	},
+	Version: Version,
 }
+
+var Version = "dev"
+var Commit = "none"
 
 func Run() {
 	if err := rootCmd.Run(os.Args); err != nil {

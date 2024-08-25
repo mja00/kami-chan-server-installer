@@ -15,6 +15,9 @@ import (
 
 // This will handle all of our API calls to the Paper API
 
+var Version = "dev"
+var Commit = "none"
+
 const baseURL = "https://api.papermc.io/v2"
 
 type PaperAPI struct {
@@ -32,7 +35,7 @@ type ProjectsResponse struct {
 }
 
 func AddHeaders(req *http.Request) {
-	req.Header.Add("User-Agent", "Kami Chan Server Installer")
+	req.Header.Add("User-Agent", "Kami Chan Server Installer"+"/"+Version+"/"+Commit)
 }
 
 func (p *PaperAPI) GetProjects() ([]string, error) {
