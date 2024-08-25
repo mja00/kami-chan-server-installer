@@ -87,6 +87,14 @@ func (p *PaperAPI) GetProject(projectID string) (*ProjectResponse, error) {
 	return &projectResponse, nil
 }
 
+func (p *PaperAPI) GetLatestVersion(projectID string) (string, error) {
+	project, err := p.GetProject(projectID)
+	if err != nil {
+		return "", err
+	}
+	return project.Versions[len(project.Versions)-1], nil
+}
+
 type VersionResponse struct {
 	ProjectId   string `json:"project_id"`
 	ProjectName string `json:"project_name"`
@@ -284,17 +292,17 @@ func (p *PaperAPI) GetBuildDownload(projectID, version string, build int, downlo
 	return nil
 }
 
-func (p *PaperAPI) DownloadLatestBuild(projectID, outputPath string, allowExperimentalBuilds bool) error {
+func (p *PaperAPI) DownloadLatestBuild(projectID, outputPath string, allowExperimentalBuilds bool) (string, int, error) {
 	project, err := p.GetProject(projectID)
 	if err != nil {
-		return err
+		return "", 0, err
 	}
 	// Need the last item in the versions list
 	version := project.Versions[len(project.Versions)-1]
 
 	builds, err := p.GetBuilds(projectID, version)
 	if err != nil {
-		return err
+		return "", 0, err
 	}
 
 	// Recursively check the builds, from last to first, until we find a build that has a channel of "default"
@@ -310,16 +318,16 @@ func (p *PaperAPI) DownloadLatestBuild(projectID, outputPath string, allowExperi
 
 	// If we don't have a build, then they were all experimental builds (probably a new MC release
 	if build.Build == 0 {
-		return fmt.Errorf("no builds found for %s", version)
+		return "", 0, fmt.Errorf("no builds found for %s", version)
 	}
 
-	return p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
+	return version, build.Build, p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
 }
 
-func (p *PaperAPI) DownloadLatestBuildForVersion(projectID, version, outputPath string, allowExperimentalBuilds bool) error {
+func (p *PaperAPI) DownloadLatestBuildForVersion(projectID, version, outputPath string, allowExperimentalBuilds bool) (string, int, error) {
 	builds, err := p.GetBuilds(projectID, version)
 	if err != nil {
-		return err
+		return "", 0, err
 	}
 
 	// Recursively check the builds, from last to first, until we find a build that has a channel of "default"
@@ -334,8 +342,8 @@ func (p *PaperAPI) DownloadLatestBuildForVersion(projectID, version, outputPath 
 	}
 
 	if build.Build == 0 {
-		return fmt.Errorf("no builds found for %s", version)
+		return "", 0, fmt.Errorf("no builds found for %s", version)
 	}
 
-	return p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
+	return version, build.Build, p.GetBuildDownload(projectID, version, build.Build, build.Downloads.Application.Name, outputPath)
 }

@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/manifoldco/promptui"
+	"github.com/mja00/kami-chan-server-installer/cfg"
 	"github.com/mja00/kami-chan-server-installer/minecraft"
 	"github.com/mja00/kami-chan-server-installer/paper"
 	"github.com/mja00/kami-chan-server-installer/utils"
@@ -55,13 +57,26 @@ var setupCmd = &cli.Command{
 	Before: func(c *cli.Context) error {
 		utils.PrintOSWarnings()
 		log.Println("Setting up the server...")
+		// Create the config file
+		config := cfg.NewConfig()
+		_ = config.Load(utils.GetServerFolder(".kami.json", c))
+		// Add the config to the context
+		c.Context = context.WithValue(c.Context, "config", config)
 		return nil
 	},
 	After: func(c *cli.Context) error {
 		log.Println("Setup complete!")
+		// Save the config
+		config := c.Context.Value("config").(*cfg.Config)
+		err := config.Save(utils.GetServerFolder(".kami.json", c))
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 	Action: func(c *cli.Context) error {
+		// Grab the config
+		config := c.Context.Value("config").(*cfg.Config)
 		// Check for Java
 		log.Println("Checking for Java...")
 		javaVersion, err := utils.GetJavaVersion()
@@ -106,13 +121,20 @@ var setupCmd = &cli.Command{
 		// Download our Paper jar
 		paperAPI := paper.NewPaperAPI()
 		if c.String("mc-version") == "latest" {
-			err = paperAPI.DownloadLatestBuild("paper", utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
+			version, build, err := paperAPI.DownloadLatestBuild("paper", utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
+			if err != nil {
+				return err
+			}
+			config.SetMinecraftVersion(version)
+			config.SetPaperBuild(strconv.Itoa(build))
 		} else {
 			// Download the specific version
-			err = paperAPI.DownloadLatestBuildForVersion("paper", c.String("mc-version"), utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
-		}
-		if err != nil {
-			return err
+			version, build, err := paperAPI.DownloadLatestBuildForVersion("paper", c.String("mc-version"), utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
+			if err != nil {
+				return err
+			}
+			config.SetMinecraftVersion(version)
+			config.SetPaperBuild(strconv.Itoa(build))
 		}
 		// If they didn't already accept the EULA, then we need to prompt them to do so, unless we're skipping prompts, then error
 		if !c.Bool("accept-eula") {
