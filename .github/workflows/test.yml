@@ -29,7 +29,7 @@ jobs:
           cache: true
       - run: go mod tidy
       # Now all we need to do is run the actual script
-      - run: go run main.go setup --accept-eula --server-name "Test Server" --whitelist --skip-prompts --allow-experimental-builds
+      - run: go run main.go setup --skip-prompts
       # Verify that paper.jar is in the server folder
       - name: Verify files
         uses: andstor/file-existence-action@v3.0.0
