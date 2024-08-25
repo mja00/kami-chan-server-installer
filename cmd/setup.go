@@ -78,7 +78,7 @@ var setupCmd = &cli.Command{
 				log.Printf("Flag: %s, Value: %s", flag, c.String(flag))
 			}
 		}
-		for {
+		for !c.Bool("skip-prompts") {
 			err := prompt(c)
 			if err != nil {
 				// If the error is that we can't open a TTY, then just break from this loop. We'll use default values
@@ -119,7 +119,7 @@ var setupCmd = &cli.Command{
 	},
 	Action: func(c *cli.Context) error {
 		// If they didn't already accept the EULA, then we need to prompt them to do so, unless we're skipping prompts, then error
-		if !acceptEULA {
+		if !acceptEULA && !c.Bool("skip-prompts") {
 			// Error out
 			return fmt.Errorf("you must accept the EULA to use this server")
 		}
@@ -230,34 +230,36 @@ var setupCmd = &cli.Command{
 		}
 		startScriptLocation := utils.GetStartScript(utils.GetServerFolder("start", c))
 		// Ask the user if they want to start the server now or not
-		var startServer bool
-		_ = huh.NewConfirm().
-			Title("Start the server?").
-			Description("Do you want to start the server now?").
-			Value(&startServer).
-			Run()
-		if startServer {
-			// Start the server
-			startScript := utils.GetStartScript("start")
-			log.Println("Starting the server...")
-			pwd, err := os.Getwd()
-			if err != nil {
-				return err
+		if !c.Bool("skip-prompts") {
+			var startServer bool
+			_ = huh.NewConfirm().
+				Title("Start the server?").
+				Description("Do you want to start the server now?").
+				Value(&startServer).
+				Run()
+			if startServer {
+				// Start the server
+				startScript := utils.GetStartScript("start")
+				log.Println("Starting the server...")
+				pwd, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+				// We need to change the working directory to the server folder
+				err = os.Chdir(utils.GetServerFolder("", c))
+				if err != nil {
+					return err
+				}
+				err = utils.RunCommandAndPipeAllSTD(exec.Command("./"+startScript), true)
+				if err != nil {
+					return err
+				}
+				// cd back
+				err = os.Chdir(pwd)
+				// If we got here, the server was started and then stopped.
+				// Just inform the user that to run the server again, they need to go into the server folder and run the start script
+				log.Println("Server was successfully started!")
 			}
-			// We need to change the working directory to the server folder
-			err = os.Chdir(utils.GetServerFolder("", c))
-			if err != nil {
-				return err
-			}
-			err = utils.RunCommandAndPipeAllSTD(exec.Command("./"+startScript), true)
-			if err != nil {
-				return err
-			}
-			// cd back
-			err = os.Chdir(pwd)
-			// If we got here, the server was started and then stopped.
-			// Just inform the user that to run the server again, they need to go into the server folder and run the start script
-			log.Println("Server was successfully started!")
 		}
 		// They said no, just tell them how to run the server
 		log.Println("To run the server, go into the server folder and run the start script.")
