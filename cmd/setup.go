@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/manifoldco/promptui"
+	"github.com/charmbracelet/huh"
 	"github.com/mja00/kami-chan-server-installer/cfg"
 	"github.com/mja00/kami-chan-server-installer/minecraft"
 	"github.com/mja00/kami-chan-server-installer/paper"
@@ -19,40 +19,21 @@ import (
 	"strings"
 )
 
+var (
+	// This will be used for huh
+	minecraftVersion  = "latest"
+	serverName        = "A Minecraft Server"
+	whitelist         = false
+	acceptEULA        = false
+	allowExperimental = false
+)
+
 var setupCmd = &cli.Command{
 	Name:        "setup",
 	Description: "Setup and install the server",
 	Usage:       "Setup and install the server",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{Name: "skip-prompts", Usage: "Skip setup prompts. This will only install Java and the jar file"},
-		&cli.BoolFlag{Name: "accept-eula", Aliases: []string{"a"}, Usage: "Accept the EULA"},
-		&cli.StringFlag{Name: "server-name", Aliases: []string{"n"}, Usage: "Server name", DefaultText: "A server installed with Kami Chan Server Installer"},
-		&cli.BoolFlag{Name: "whitelist", Aliases: []string{"w"}, Usage: "Enable whitelist"},
-		&cli.BoolFlag{Name: "allow-experimental-builds", Aliases: []string{"e"}, Usage: "Allow experimental builds of Paper to be used"},
-		&cli.StringFlag{Name: "mc-version", Aliases: []string{"m"}, Usage: "Minecraft version", Value: "latest", Action: func(ctx *cli.Context, v string) error {
-			// If the version isn't latest then we need to check if it's valid format
-			// Valid format is X.Y.Z or X.Y
-			if v != "latest" {
-				// Quick and dirty check to see if it's valid
-				// If there is no "." thne it's definitely invalid
-				if !strings.Contains(v, ".") {
-					return fmt.Errorf("invalid Minecraft version: %s", v)
-				}
-				// If there is a "." then we need to make sure it's valid
-				split := strings.Split(v, ".")
-				if len(split) < 2 || len(split) > 3 {
-					return fmt.Errorf("invalid Minecraft version: %s", v)
-				}
-				// So we know it's at least 2 parts, make sure all the parts are numbers
-				for _, part := range split {
-					if _, err := strconv.Atoi(part); err != nil {
-						return fmt.Errorf("invalid Minecraft version: %s", v)
-					}
-				}
-				// Good enough, we're good
-			}
-			return nil
-		}},
 	},
 	Before: func(c *cli.Context) error {
 		utils.PrintOSWarnings()
@@ -65,8 +46,33 @@ var setupCmd = &cli.Command{
 		// If debug pring all the flags
 		if c.Bool("debug") {
 			log.Println("Debug mode enabled")
-			for _, flag := range c.FlagNames() {
-				log.Printf("Flag: %s, Value: %s", flag, c.String(flag))
+		}
+		for !c.Bool("skip-prompts") {
+			err := prompt()
+			if err != nil {
+				// If the error is that we can't open a TTY, then just break from this loop. We'll use default values
+				// error: huh: could not open a new TTY: open /dev/tty: no such device or address
+				if strings.Contains(err.Error(), "could not open a new TTY") {
+					break
+				}
+				// Otherwise, we'll just return the error
+				return err
+			}
+			// Print out our settings
+			// TODO: Replace this with a nicer output. Probably just some bubbletea fanciness
+			fmt.Printf("Minecraft Version: %s\n", minecraftVersion)
+			fmt.Printf("Allow Experimental Builds: %t\n", allowExperimental)
+			fmt.Printf("Server Name: %s\n", serverName)
+			fmt.Printf("Whitelist: %t\n", whitelist)
+			// Ask if they want to save these settings
+			var settingsGood bool
+			_ = huh.NewConfirm().
+				Title("Save these settings?").
+				Description("Do you want to save these settings?").
+				Value(&settingsGood).
+				Run()
+			if settingsGood {
+				break
 			}
 		}
 		return nil
@@ -82,6 +88,11 @@ var setupCmd = &cli.Command{
 		return nil
 	},
 	Action: func(c *cli.Context) error {
+		// If they didn't already accept the EULA, then we need to prompt them to do so, unless we're skipping prompts, then error
+		if !acceptEULA && !c.Bool("skip-prompts") {
+			// Error out
+			return fmt.Errorf("you must accept the EULA to use this server")
+		}
 		// Grab the config
 		config := c.Context.Value("config").(*cfg.Config)
 		// Check for Java
@@ -93,11 +104,11 @@ var setupCmd = &cli.Command{
 		log.Printf("Java version: %s\n", javaVersion.Version)
 		// TODO: When Paper API v3 is released, we can check the recommended java version there. For now, we'll do a really shit check
 		var requiredJavaVersion int
-		if c.String("mc-version") == "latest" {
+		if minecraftVersion == "latest" {
 			// TODO: Don't hardcode this
 			requiredJavaVersion = 21
 		} else {
-			requiredJavaVersion, err = utils.MCVersionToJavaMajor(c.String("mc-version"))
+			requiredJavaVersion, err = utils.MCVersionToJavaMajor(minecraftVersion)
 			if err != nil {
 				return err
 			}
@@ -127,8 +138,8 @@ var setupCmd = &cli.Command{
 		log.Println("Downloading server files...")
 		// Download our Paper jar
 		paperAPI := paper.NewPaperAPI()
-		if c.String("mc-version") == "latest" {
-			version, build, err := paperAPI.DownloadLatestBuild("paper", utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
+		if minecraftVersion == "latest" {
+			version, build, err := paperAPI.DownloadLatestBuild("paper", utils.GetServerFolder("paper.jar", c), allowExperimental)
 			if err != nil {
 				return err
 			}
@@ -136,78 +147,44 @@ var setupCmd = &cli.Command{
 			config.SetPaperBuild(strconv.Itoa(build))
 		} else {
 			// Download the specific version
-			version, build, err := paperAPI.DownloadLatestBuildForVersion("paper", c.String("mc-version"), utils.GetServerFolder("paper.jar", c), c.Bool("allow-experimental-builds"))
+			version, build, err := paperAPI.DownloadLatestBuildForVersion("paper", minecraftVersion, utils.GetServerFolder("paper.jar", c), allowExperimental)
 			if err != nil {
 				return err
 			}
 			config.SetMinecraftVersion(version)
 			config.SetPaperBuild(strconv.Itoa(build))
 		}
-		// If they didn't already accept the EULA, then we need to prompt them to do so, unless we're skipping prompts, then error
-		if !c.Bool("accept-eula") {
-			// Check if the eula.txt file already exists and if the eula is already accepted
-			eulaFile, err := os.ReadFile(utils.GetServerFolder("eula.txt", c))
-			if err != nil {
-				// Ignore file not found error
-				if !os.IsNotExist(err) {
-					return err
-				}
-			}
-			var eulaAccepted bool
-			if strings.Contains(string(eulaFile), "eula=true") {
-				log.Println("EULA already accepted")
-				eulaAccepted = true
-			}
-			// By default, we'll reject the EULA unless they say yes
-			if !eulaAccepted {
-				for {
-					log.Println("You must accept the Minecraft EULA to use this server. You can read the EULA here: https://www.minecraft.net/en-us/eula Do you accept the EULA?")
-					fmt.Print("Accept the EULA? [y/N] ")
-					var response string
-					_, err := fmt.Scanln(&response)
-					if err != nil {
-						return err
-					}
-					response = strings.ToLower(response)
-					if response == "y" || response == "yes" {
-						break
-					} else {
-						// No is default
-						return fmt.Errorf("you must accept the EULA to use this server")
-					}
-				}
-				// They accepted the EULA to get to this point. Write eula=true to the server/eula.txt file
-				err = os.WriteFile(utils.GetServerFolder("eula.txt", c), []byte("eula=true"), 0644)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		// Prompt the user for a MOTD/server name
-		// Read our server.properties file
-		// While this is a setup command, we're going to assume someone will run this accidentally, this will not wipe their config
-		err = minecraft.ReadServerProperties(utils.GetServerFolder("server.properties", c))
+		// Check if the eula.txt file already exists and if the eula is already accepted
+		eulaFile, err := os.ReadFile(utils.GetServerFolder("eula.txt", c))
 		if err != nil {
-			return err
-		}
-		if !c.Bool("skip-prompts") {
-			// If they've already set a server name in the flags, then we'll use that
-			if c.String("server-name") == "" {
-				value := minecraft.PropertyPrompt("motd", "A Minecraft Server")
-				viper.Set("motd", value)
-			}
-			// Same with the whitelist
-			if !c.Bool("whitelist") {
-				value := minecraft.ConfirmPrompt("whitelist")
-				viper.Set("white-list", value)
-			}
-			// Write the server.properties file
-			err = minecraft.WriteServerProperties(utils.GetServerFolder("server.properties", c))
+			// If it's not found, then we need to write the eula.txt file
+			err = os.WriteFile(utils.GetServerFolder("eula.txt", c), []byte("eula=true"), 0644)
 			if err != nil {
 				return err
 			}
 		}
-
+		// If the eula is already accepted, then we're good
+		if strings.Contains(string(eulaFile), "eula=true") {
+			log.Println("EULA already accepted")
+		} else {
+			// Accept it
+			err = os.WriteFile(utils.GetServerFolder("eula.txt", c), []byte("eula=true"), 0644)
+			if err != nil {
+				return err
+			}
+		}
+		// Read our server.properties file
+		err = minecraft.ReadServerProperties(utils.GetServerFolder("server.properties", c))
+		if err != nil {
+			return err
+		}
+		viper.Set("motd", serverName)
+		viper.Set("white-list", whitelist)
+		// Write the server.properties file
+		err = minecraft.WriteServerProperties(utils.GetServerFolder("server.properties", c))
+		if err != nil {
+			return err
+		}
 		// Get the RAM of the machine
 		totalRAM := float64(memory.TotalMemory())
 		// At most we'll only ever set the script to use 10GB of RAM
@@ -221,35 +198,36 @@ var setupCmd = &cli.Command{
 		}
 		startScriptLocation := utils.GetStartScript(utils.GetServerFolder("start", c))
 		// Ask the user if they want to start the server now or not
-		prompt := promptui.Prompt{
-			Label:     "Would you like to start the server now?",
-			IsConfirm: true,
-		}
-		result, _ := prompt.Run()
-		if result == "y" {
-			// Start the server
-			startScript := utils.GetStartScript("start")
-			log.Println("Starting the server...")
-			pwd, err := os.Getwd()
-			if err != nil {
-				return err
+		if !c.Bool("skip-prompts") {
+			var startServer bool
+			_ = huh.NewConfirm().
+				Title("Start the server?").
+				Description("Do you want to start the server now?").
+				Value(&startServer).
+				Run()
+			if startServer {
+				// Start the server
+				startScript := utils.GetStartScript("start")
+				log.Println("Starting the server...")
+				pwd, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+				// We need to change the working directory to the server folder
+				err = os.Chdir(utils.GetServerFolder("", c))
+				if err != nil {
+					return err
+				}
+				err = utils.RunCommandAndPipeAllSTD(exec.Command("./"+startScript), true)
+				if err != nil {
+					return err
+				}
+				// cd back
+				err = os.Chdir(pwd)
+				// If we got here, the server was started and then stopped.
+				// Just inform the user that to run the server again, they need to go into the server folder and run the start script
+				log.Println("Server was successfully started!")
 			}
-			// We need to change the working directory to the server folder
-			err = os.Chdir(utils.GetServerFolder("", c))
-			if err != nil {
-				return err
-			}
-			err = utils.RunCommandAndPipeAllSTD(exec.Command("./"+startScript), true)
-			if err != nil {
-				return err
-			}
-			// cd back
-			err = os.Chdir(pwd)
-			// If we got here, the server was started and then stopped.
-			// Just inform the user that to run the server again, they need to go into the server folder and run the start script
-			log.Println("Server was successfully started! To run the server again, go into the server folder and run the start script.")
-			log.Printf("The start script is located at: %s", startScriptLocation)
-			return nil
 		}
 		// They said no, just tell them how to run the server
 		log.Println("To run the server, go into the server folder and run the start script.")
@@ -260,4 +238,70 @@ var setupCmd = &cli.Command{
 
 func init() {
 	rootCmd.Commands = append(rootCmd.Commands, setupCmd)
+}
+
+func prompt() error {
+	// Before we do anything, lets get some info from the user
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Minecraft Version").
+				Description("What version of Minecraft do you want to use?").
+				Value(&minecraftVersion).
+				Validate(func(v string) error {
+					if v != "latest" {
+						// Quick and dirty check to see if it's valid
+						// If there is no "." thne it's definitely invalid
+						if !strings.Contains(v, ".") {
+							return fmt.Errorf("invalid Minecraft version: %s", v)
+						}
+						// If there is a "." then we need to make sure it's valid
+						split := strings.Split(v, ".")
+						if len(split) < 2 || len(split) > 3 {
+							return fmt.Errorf("invalid Minecraft version: %s", v)
+						}
+						// So we know it's at least 2 parts, make sure all the parts are numbers
+						for _, part := range split {
+							if _, err := strconv.Atoi(part); err != nil {
+								return fmt.Errorf("invalid Minecraft version: %s", v)
+							}
+						}
+						// Good enough, we're good
+					}
+					return nil
+				}),
+			// Allow experimental builds
+			huh.NewConfirm().
+				Title("Allow Experimental Builds").
+				Description("Do you want to allow experimental builds of Paper to be used?").
+				Value(&allowExperimental),
+		),
+		huh.NewGroup(
+			// Server name
+			huh.NewInput().
+				Title("Server Name").
+				Description("What do you want to name your server?").
+				Value(&serverName).
+				Validate(huh.ValidateMaxLength(56)).
+				Placeholder("A Minecraft Server"),
+			// Whitelist
+			huh.NewConfirm().
+				Title("Whitelist").
+				Description("Do you want to enable the whitelist?").
+				Value(&whitelist),
+		),
+		huh.NewGroup(
+			// Accept EULA
+			huh.NewConfirm().
+				Title("Accept EULA").
+				Description("Do you accept the Minecraft EULA?").
+				Value(&acceptEULA),
+		),
+	)
+	// Run the form, we'll use the results in the action
+	err := form.Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }
