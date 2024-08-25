@@ -62,6 +62,13 @@ var setupCmd = &cli.Command{
 		_ = config.Load(utils.GetServerFolder(".kami.json", c))
 		// Add the config to the context
 		c.Context = context.WithValue(c.Context, "config", config)
+		// If debug pring all the flags
+		if c.Bool("debug") {
+			log.Println("Debug mode enabled")
+			for _, flag := range c.FlagNames() {
+				log.Printf("Flag: %s, Value: %s", flag, c.String(flag))
+			}
+		}
 		return nil
 	},
 	After: func(c *cli.Context) error {

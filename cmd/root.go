@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -11,7 +12,7 @@ var rootCmd = &cli.App{
 	Usage: "Installer for Paper server",
 	Action: func(cCtx *cli.Context) error {
 		log.Println("No commands given. Installing server by default...")
-		return setupCmd.Run(cCtx)
+		return nil
 	},
 	Flags: []cli.Flag{
 		&cli.BoolFlag{Name: "debug", Usage: "Enable debug mode"},
@@ -19,7 +20,8 @@ var rootCmd = &cli.App{
 		&cli.StringFlag{Name: "server-dir", Usage: "Server directory", Value: "server"},
 		&cli.BoolFlag{Name: "install-java-please", Usage: "This will install Java for you anyways on Linux"},
 	},
-	Version: Version,
+	Version:        Version,
+	DefaultCommand: "setup",
 }
 
 var Version = "dev"
@@ -27,6 +29,9 @@ var Commit = "none"
 
 func Run() {
 	if err := rootCmd.Run(os.Args); err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		// Then hold the terminal open so the user can read the error
+		fmt.Println("Press any key to exit...")
+		_, _ = fmt.Scanln()
 	}
 }
