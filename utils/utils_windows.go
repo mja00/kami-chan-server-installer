@@ -15,7 +15,9 @@ import (
 
 func PrintOSWarnings() {
 	// Just let them know macOS isn't the _best_ OS for running a Minecraft server
+	color.Set(color.FgYellow)
 	log.Println("Warning: Windows is not the best OS for running a Minecraft server. You may experience issues with performance or stability.")
+	color.Unset()
 }
 
 func GetArch() string {

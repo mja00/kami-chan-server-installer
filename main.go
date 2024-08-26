@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/mja00/kami-chan-server-installer/cmd"
 	"github.com/mja00/kami-chan-server-installer/paper"
 	"github.com/mja00/kami-chan-server-installer/update"
 	"log"
-	"os"
 )
 
 var Version = "dev"
@@ -27,24 +27,27 @@ func main() {
 		log.Println("Error checking for updates:", err)
 	}
 	if updateAvailable {
+		color.Set(color.FgGreen)
 		log.Println("An update is available!")
-		log.Println("Downloading update...")
 		url := update.GetUpdateURL()
 		if url == "" {
 			log.Println("Error downloading update")
 		} else {
-			log.Println("Downloading update from:", url)
-			downloadErr := update.DownloadUpdate(url)
-			if downloadErr != nil {
-				log.Println("Error downloading update:", downloadErr)
-			}
-			installErr := update.InstallUpdate()
-			if installErr != nil {
-				log.Println("Error installing update:", installErr)
-			}
-			log.Println("Update complete!")
-			os.Exit(0)
+			//log.Println("Downloading update from:", url)
+			//downloadErr := update.DownloadUpdate(url)
+			//if downloadErr != nil {
+			//	log.Println("Error downloading update:", downloadErr)
+			//}
+			//installErr := update.InstallUpdate()
+			//if installErr != nil {
+			//	log.Println("Error installing update:", installErr)
+			//}
+			//log.Println("Update complete!")
+			//os.Exit(0)
+			// For now just print the URL. We support downloading the update and installing it. Just it's a bit janky.
+			log.Println("Download the update from:", url)
 		}
+		color.Unset()
 	}
 	cmd.Run()
 }
