@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -76,7 +77,9 @@ func InstallJava(javaPath string, cliCtx *cli.Context) error {
 
 func PrintOSWarnings() {
 	// Just let them know macOS isn't the _best_ OS for running a Minecraft server
+	color.Set(color.FgYellow)
 	log.Println("Warning: macOS is not the best OS for running a Minecraft server. You may experience issues with performance or stability.")
+	color.Unset()
 }
 
 func WriteStartScript(path string, ramAmount int, cliCtx *cli.Context) error {
