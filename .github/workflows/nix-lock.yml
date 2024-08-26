@@ -1,7 +1,6 @@
 name: "Update flake.lock"
 on:
   workflow_dispatch:
-  push:
 
 permissions:
   contents: write
@@ -35,3 +34,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore: update flake.lock"
+          branch: main
