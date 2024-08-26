@@ -9,7 +9,7 @@ in
     installShellFiles ? pkgs.installShellFiles,
     # version and vendorSha256 should be specified by the caller
     version ? "latest",
-    vendorSha256,
+    vendorHash,
   }:
     buildGoModule rec {
       pname = "kami-chan-server-installer";

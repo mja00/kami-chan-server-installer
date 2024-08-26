@@ -9,8 +9,8 @@ pkgs.callPackage (import ./.) {
     ## `pkgs.buildGo122Module` in Nixpkgs.
     ## `buildGoModule` is set as `pkgs.buildGoModule` to try and work around
     ## `vendorHash` issues in the future.
-  vendorSha256 = sha256;
+  vendorHash = sha256;
 }
-// {
+//{
   outputHash = sha256;
 }
