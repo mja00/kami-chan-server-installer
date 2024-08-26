@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
 	"io"

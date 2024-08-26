@@ -3,7 +3,10 @@ package update
 import (
 	"github.com/goccy/go-json"
 	"github.com/mja00/kami-chan-server-installer/utils"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 func GetUpdateURL() string {
