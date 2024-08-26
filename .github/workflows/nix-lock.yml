@@ -2,6 +2,11 @@ name: "Update flake.lock"
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+  issues: write
+
 jobs:
   update-lock:
     name: lock
