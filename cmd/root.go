@@ -23,8 +23,6 @@ var rootCmd = &cli.App{
 	Version:        Version,
 	DefaultCommand: "setup",
 	Before: func(cCtx *cli.Context) error {
-		// Clear the terminal
-		fmt.Println("\033[H\033[2J")
 		return nil
 	},
 }
